@@ -8,6 +8,9 @@ from .utils.conf import load_config
 from .utils.credentials import load_credentials_from_json, load_credentials_from_dict
 
 
+CSV_SNIFFER_BUFFER_SIZE = 4096
+
+
 def import_csv(source: Optional[Union[str, StringIO]] = None,
                url: Optional[str] = None,
                cell: Optional[str] = None,
@@ -27,13 +30,16 @@ def import_csv(source: Optional[Union[str, StringIO]] = None,
     if settings is None and (source is None or url is None or credentials is None):
         raise ValueError('required parameters missed')
 
+    csv_sniffer_buffer_size = CSV_SNIFFER_BUFFER_SIZE
+
     if settings is not None:
-        source = settings['source']
-        url = settings['url']
+        source = settings.get('source', source)
+        url = settings.get('url', url)
         cell = settings.get('cell', 'A1')
-        credentials = settings['credentials']
-    else:
-        cell = cell if cell is not None else 'A1'
+        credentials = settings.get('credentials', credentials)
+        csv_sniffer_buffer_size = settings.get('csv_sniffer_buffer_size', CSV_SNIFFER_BUFFER_SIZE)
+
+    cell = cell if cell is not None else 'A1'
 
     # TODO: add other types of credentials
     if isinstance(credentials, dict):
@@ -49,13 +55,13 @@ def import_csv(source: Optional[Union[str, StringIO]] = None,
     if isinstance(source, str):
         try:
             infile = open(source, 'r')
-            dialect = csv.Sniffer().sniff(infile.read(1024))
+            dialect = csv.Sniffer().sniff(infile.read(csv_sniffer_buffer_size))
             infile.seek(0)
             csv_data = infile.read()
-        except IOError as e:
+        except Exception as e:
             raise ValueError(f'source file error {str(e)}')
     elif isinstance(source, StringIO):
-        dialect = csv.Sniffer().sniff(source.read(1024))
+        dialect = csv.Sniffer().sniff(source.read(csv_sniffer_buffer_size))
         source.seek(0)
         csv_data = source.read()
     else:
