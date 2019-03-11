@@ -26,6 +26,9 @@ before_script:
 script:
   - pytest -vv -x tests
 
+before_deploy:
+  - rm api-key.json
+
 stages:
   - test
   - deploy
